@@ -4,72 +4,48 @@ on:
   push:
     branches:
       - main
-      - '**'       # Runs on all branches including interns' personal branches
+      - '**'
   pull_request:
 
 jobs:
-  build-node:
-    name: Build & Test Node.js Service
+  detect-changes:
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.message, 'node') || github.ref == 'refs/heads/main' # Adjust condition if needed
-
+    outputs:
+      services: ${{ steps.filter.outputs.services }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 18
-
-      - name: Install dependencies & test
-        working-directory: ./services/auth-service  # Change service folder accordingly
+      - id: filter
+        name: Detect changed service directories
         run: |
-          npm install
-          npm test || echo "No tests found"
+          echo "services=$(git diff --name-only ${{ github.event.before }} ${{ github.sha }} | grep '^services/' | cut -d/ -f2 | sort -u | jq -R -s -c 'split("\n") | map(select(. != ""))')" >> $GITHUB_OUTPUT
 
-      - name: Build Docker image
-        run: docker build -t auth-service ./services/auth-service
-
-  build-python:
-    name: Build & Test Python Service
+  build:
+    needs: detect-changes
     runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.message, 'python') || github.ref == 'refs/heads/main'
-
+    strategy:
+      matrix:
+        service: ${{ fromJson(needs.detect-changes.outputs.services) }}
     steps:
       - uses: actions/checkout@v3
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: 3.10
-
-      - name: Install dependencies & test
-        working-directory: ./services/user-service
+      - name: Determine language and build
+        working-directory: ./services/${{ matrix.service }}
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          # Run tests or linting if available
-
-      - name: Build Docker image
-        run: docker build -t user-service ./services/user-service
-
-  build-java:
-    name: Build & Test Java Service
-    runs-on: ubuntu-latest
-    if: contains(github.event.head_commit.message, 'java') || github.ref == 'refs/heads/main'
-
-    steps:
-      - uses: actions/checkout@v3
-
-      - name: Set up Java
-        uses: actions/setup-java@v3
-        with:
-          distribution: temurin
-          java-version: 17
-
-      - name: Build with Maven
-        working-directory: ./services/profile-service
-        run: mvn clean package
-
-      - name: Build Docker image
-        run: docker build -t profile-service ./services/profile-service
+          if [ -f "package.json" ]; then
+            echo "Node.js service detected"
+            npm install
+            npm test || echo "No tests"
+            docker build -t ${{ matrix.service }} .
+          elif [ -f "requirements.txt" ]; then
+            echo "Python service detected"
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+            docker build -t ${{ matrix.service }} .
+          elif [ -f "pom.xml" ]; then
+            echo "Java service detected"
+            mvn clean package
+            docker build -t ${{ matrix.service }} .
+          else
+            echo "No recognizable service in ${{ matrix.service }}"
+            exit 1
