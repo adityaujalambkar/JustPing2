@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         service:
-          - typing-indicator-service
+          - Typing_indicator_service
           - chat-service
           - message-history-service
           # Add more services here
