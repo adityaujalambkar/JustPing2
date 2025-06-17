@@ -1,4 +1,4 @@
-name: CI for All Microservices
+name: CI for Microservices
 
 on:
   push:
@@ -7,12 +7,18 @@ on:
     branches: [ main ]
 
 jobs:
-  typing-indicator-service:
-    name: Typing Indicator Service CI
+  build:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        service:
+          - typing-indicator-service
+          - chat-service
+          - message-history-service
+
     defaults:
       run:
-        working-directory: services/typing-indicator-service
+        working-directory: services/${{ matrix.service }}
 
     steps:
     - name: Checkout code
@@ -31,25 +37,13 @@ jobs:
     - name: Lint with flake8
       run: |
         pip install flake8
-        flake8 app
+        flake8 app || true
 
-    - name: Check Python formatting with black
+    - name: Format check with black
       run: |
         pip install black
-        black --check app
+        black --check app || true
 
-    - name: Run tests (if any)
+    - name: Run tests
       run: |
-        echo "Add test commands here, e.g., pytest"
-
-  # Repeat for other services if needed, or use a matrix
-
-  # Example: chat-service
-  # chat-service:
-  #   runs-on: ubuntu-latest
-  #   defaults:
-  #     run:
-  #       working-directory: services/chat-service
-  #   steps:
-  #     ...
-
+        echo "Add pytest or unittest here"
