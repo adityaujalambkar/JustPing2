@@ -1,0 +1,49 @@
+# File: .github/workflows/ci.yml
+
+name: CI for FastAPI Microservices
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        service:
+          - typing-indicator-service
+          - chat-service
+          - message-history-service
+          # Add more services here
+
+    defaults:
+      run:
+        working-directory: services/${{ matrix.service }}
+
+    steps:
+      - name: ⬇️ Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install black flake8 pytest
+
+      - name: 🎨 Check code formatting (black)
+        run: black --check app
+
+      - name: 🧹 Run linting (flake8)
+        run: flake8 app
+
+      - name: 🧪 Run unit tests
+        run: pytest tests
