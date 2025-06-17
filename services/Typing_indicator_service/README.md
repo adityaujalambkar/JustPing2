@@ -1,0 +1,1 @@
+[Typing Indicator Document](https://docs.google.com/document/d/1mJCmIdjQKPnWd6xRddKHluGt45ogteomM_JggpA9jPw/edit?tab=t.0#heading=h.o2p21a9l26mu)
