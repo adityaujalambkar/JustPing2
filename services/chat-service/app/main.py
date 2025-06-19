@@ -70,3 +70,9 @@ def delete_message(message_id: int):
         raise HTTPException(status_code=404, detail="Message not found")
     del chat_messages[message_id]
     return {"message": "Deleted successfully"}
+
+
+# ✅ New Root Endpoint (optional but useful)
+@app.get("/")
+def root():
+    return {"message": "FastAPI Chat Service is running!"}
